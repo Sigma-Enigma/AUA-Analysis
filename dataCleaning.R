@@ -103,8 +103,6 @@ kidneyUrinaryMccData_2018_nonmetro <- kidneyUrinaryMccData_2018 %>%
 
 
 
-
-
 ########## BEGIN PRE-ANAYSIS NOTES ########## 
 
 
@@ -112,52 +110,112 @@ kidneyUrinaryMccData_2018_nonmetro <- kidneyUrinaryMccData_2018 %>%
 # read CMS documentation on Inpatient PUF; https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Inpatient_Methodology.pdf
 # read FAQ for Inpatient PUF ; https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Inpatient_Outpatient_FAQ.pdf
 
-# TODO : Ask team if the 2020 variables are similar to the 2018 methods. Otherwise I would need to fish for the original paper and cite it
-# SOLVED : They are not. https://www.splitgraph.com/cms-gov/inpatient-prospective-payment-system-ipps-provider-yekz-wzdr
-# TODO : Double check with team that this source is accurate. 
-# TODO : Also still need to find original paper for 2018 data to verify methods are not different as well.
+# key variable descriptions:
+# Average Covered Charges: The provider's average charge for services covered by Medicare for all discharges in the MS-DRG. These will vary from hospital to hospital because of differences in hospital charge structures.
 
-# questions: were the DRG_DESC codes updated to reflect the codes in 2020, or do they reflect the codes at the time 2018? If so the values may need to be adjusted, (or at least visually inspected to further subset the data).
-# TODO : check documentation for charge data regarding above comment. 
-# Status: unclear
-
-# used this DRG code as source: https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/MedicareFeeforSvcPartsAB/downloads/DRGdesc08.pdf
-# indicated the key DRG code = 689 KIDNEY AND URINARY TRACT INFECTIONS WITH MCC
-# however I noticed the DRG code for KIDNEY & URINARY TRACT INFECTIONS W MCC is 346 in our data
-# it appears that DRG is not the same as MS-DRG
-# TODO : Normally if I had communication with my team, this is where I would ask why these values are different and ensure that the selected data is correct
-
-# did some reading on health care finance terminology
-# https://www.fah.org/blog/words-matter-defining-hospital-charges-costs-and-payments-and-the-numbers-t
-
-# did some reading on DRG
-# https://www.verywellhealth.com/how-does-a-drg-determine-how-much-a-hospital-gets-paid-1738874
-
-# TODO : is mean_medicare_payments averaged across all providers? Or only across all discharged patients for each provider x MS-DRG group?
+# !!!!!!!!!! IMPORTANT !!!!!!!!!!
+# note: after reading things later (in next 3 dozen lines), I believe the above value is not useful, as it has nothing to do with the real costs paid by Medicare. My understanding is the charges are a sort of antiquated system
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 # mean_medicare_payments =   averaged_groupedby_MS-DRG-&-Provider( filter(total paid to provider ))
 
+
+# After reading the documents I noticed there are differences betwen my data and the ones described in the document, at which point I realized they forwarded the 2020 documentation. I realized I may need to do more digging to ensure there were no significant differences.
+
+# Furthermore, I realized the payment calculation process is quite complex and seems to intentionally pay different amounts to different hospitals, depending on a number of important factors. This suggested I must do more reading before I have any hope of making meaningful policy suggestions.
+
+# Also, I was a bit confused about the medical finance terminology used for the CMS documentation so I did some googling and read this:
+# https://www.fah.org/blog/words-matter-defining-hospital-charges-costs-and-payments-and-the-numbers-t
+
+
+# normally if I had a team I would have done the following around this point:
+# TODO : Ask team if the 2020 variables are similar to the 2018 methods. Otherwise I would need to fish for the original paper and cite it
+# SOLVED : They are not. https://www.splitgraph.com/cms-gov/inpatient-prospective-payment-system-ipps-provider-yekz-wzdr
+# TODO : Double check with team that this source is accurate, or find original paper for 2018 data to understand methods
+# SOLVED: the below file has all the detailed breakdowns of the adjustment system in csv formats. 
+# https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/AcuteInpatientPPS/Acute-Inpatient-Files-for-Download-Items/FY2018-Final-Rule-Correction-Notice-Files
+
+# Above files are a bit long and highly technical, I am short on time so I attempted to find shorter summaries of the system
+
+#  reading on DRG
+# https://www.verywellhealth.com/how-does-a-drg-determine-how-much-a-hospital-gets-paid-1738874
+
+# read on how DRG rates are used for PPS system
+# https://oig.hhs.gov/oei/reports/oei-09-00-00200.pdf 
+# note: above file is old 2001, but gives good historical context
+# note: better updated version below but no time to re-read in full
+# https://www.cms.gov/Outreach-and-Education/Medicare-Learning-Network-MLN/MLNMattersArticles/downloads/MM10273.pdf
+
+# my summary of things that influrence total payments per provider per year (medicare_reimbursement variable)
+# fixed things
+# -DRG base rates [diagnostic related group] (set at start of fiscal year)
+# -DRG base rate severity multiplier [the S in MS-DRG] (depends on patinet, but not relevant for us as we focus on one MS-DRG)
+
+# variable things
+# -number of patients that enter a hospital (not relevent because standardized cost per patient by averaging)
+# -provider specific costs
+# ----fixed costs per institution [equipment/rent] (PARTIALLY ACCOUNTED by ading metro variable; better proxies are regional cost-of-living, real estate indexes, and equipment/utility costs)
+# ----labor costs per institution ( PARTIALLY ACCOUNTED for by adding metro variable; cities have higher wage index multiplers; consider using BLS/Census regional wage data as a better proxy)
+# -is low income area? (UNACCOUNTED disproporionate share; add census data)
+# -is cancer hospital (UNACCOUNTED or psychiatric/long-term-care/childrens/rehab)?
+# -is teaching hospital? (UNACCOUNTED and confounded with the metro variable; merge with other tables to find this info)
+
+# to do meaningful work I would need to pull some more data from open sources.
+# I will begin by doing the minimum required work (tests of difference) and then add more to it if I have time to find the data.
+
+
+## Next steps: 
+# two policy questions come to mind
+# After you account for each cost adjustment, do they match the actual incurred costs to providers? [fix system inefficiencies]
+# Are there any bad incentives (gaming of system) that could be corrected for with policy decisions?
+
+# Note: In order to see discrepencies between payments and real costs, I would need cost data from each provider. (Think about where you may find that for later open source projects). If I had the REAL costs to each provider (instead of "charges") I could possibly make some substantive policy suggestions.
 
 
 ########## END PRE-ANALYSIS NOTES ########## 
 
 
 
-
-
 ########## BEGIN ANALYSIS ########## 
+
+# Goals:
+# test difference of groups (by metro status)
+# test differences in group while accounting for heirarcical structure (by metro status AND using HRR as sub-groups)
+# ANOVA 
+
+
+#### BEGIN EDA ####
 
 hist(kidneyUrinaryMccData_2018_metro$MEAN_MEDICARE_PAYMENTS, breaks = 40)
 
 hist(kidneyUrinaryMccData_2018_nonmetro$MEAN_MEDICARE_PAYMENTS, breaks = 20)
 
+table(kidneyUrinaryMccData_2018$HRR_DESC)
+table(kidneyUrinaryMccData_2018$FACILITY_CITY)
+table(kidneyUrinaryMccData_2018$FACILITY_ZIP_CODE)
+
+#### END EDA ####
+
+# required analysis
+
+# F-test of difference of variances for two samples
+var.test(kidneyUrinaryMccData_2018_metro$MEAN_COVERED_CHARGES, kidneyUrinaryMccData_2018_nonmetro$MEAN_COVERED_CHARGES)
+# Welch's t-test of diffirence of means for two samples with unequal variances
+t.test(kidneyUrinaryMccData_2018_metro$MEAN_COVERED_CHARGES, kidneyUrinaryMccData_2018_nonmetro$MEAN_COVERED_CHARGES)
+
+# metro regins have double the average charge rate, and double the std_dev charge rate
 
 ########## END ANALYSIS ########## 
 
 
+# extra analysis
+# F-test of difference of variances for two samples
+var.test(kidneyUrinaryMccData_2018_metro$MEAN_OUTOFPOCKET, kidneyUrinaryMccData_2018_nonmetro$MEAN_OUTOFPOCKET)
+# Welch's t-test of diffirence of means for two samples with unequal variances
+t.test(kidneyUrinaryMccData_2018_metro$MEAN_OUTOFPOCKET, kidneyUrinaryMccData_2018_nonmetro$MEAN_OUTOFPOCKET)
 
-
+# why are these values so different? shouldn't the payment be standardized (to a ceiling) by medicare?
 
 ######### BEGIN VISUALIZATION ######### 
 
@@ -170,6 +228,9 @@ hist(kidneyUrinaryMccData_2018_nonmetro$MEAN_MEDICARE_PAYMENTS, breaks = 20)
 
 ######### BEGIN SUMMARY NOTES ON DATA ######### 
 
+# Methodology:
+# see pg 7-9: https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Inpatient_Methodology.pdf
+
 # overview: Data consists of aggregations of financial data (insurance charges) grouped by Medicare-Severity-Diagnosis-Related-Groups (MS-DRG) and medical facility. In other words, each row function as the totals of a-la-carte "health-products" that healthcare workers of a specific facility provide. The primary data source for these data is CMS’s Medicare Provider Analysis and Review (MEDPAR) inpatient data based on fiscal year (October 1st through September 30th). Over 3,000 hospitals that get medicare/medicaid patients (FFS) contributed to this data.
 
 # Each row is an aggregate column for each provider x MS-DRG 
@@ -179,12 +240,12 @@ hist(kidneyUrinaryMccData_2018_nonmetro$MEAN_MEDICARE_PAYMENTS, breaks = 20)
 
 # discharge_count_sum = sum of patients discharged from facility in that year
 
-# Methodology:
-# see pg 7-9: https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Inpatient_Methodology.pdf
-
-# 1) Limit CMS MedPAR discharge data to fee-for-service short-stay hospital discharges associated with ‘IPPS’ hospitals using the following criteria:
-
-
+# example DRG based payment calculation
+# https://en.wikipedia.org/wiki/Diagnosis-related_group#Example_calculation
+# medicare_payment = hospital_base_pay_rate * DRG_specific_weight
+# hospital_base_pay_rate = labor_portion + nonlabor_portion
+# labor_portion = constant * regional_wage_index_multiplier
+# nonlabor_portion = constant_based_on_equipment +/- cost_of_living_adjustment {except for alaska and hawaii states} 
 
 
 ######### END SUMMARY NOTES ON DATA ######### 
@@ -202,6 +263,28 @@ hist(kidneyUrinaryMccData_2018_nonmetro$MEAN_MEDICARE_PAYMENTS, breaks = 20)
 # refer to below for data collection information (for writeup)
 # https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Inpatient_Methodology.pdf
 
+# articles on DRG and how hospitals get paid
+# https://www.google.com/search?q=relative+weight+ms-drg&oq=relative+weight+ms&aqs=chrome.1.69i57j0i22i30l2j0i10i22i30j0i390l2.5046j0j4&sourceid=chrome&ie=UTF-8
+# https://acphospitalist.org/archives/2019/05/coding-corner-the-abcs-of-drgs.htm#:~:text=Over%2014%2C000%20ICD%2D10%2DCM,cost%20of%20care%20during%20hospitalization.
+# https://www.verywellhealth.com/how-does-a-drg-determine-how-much-a-hospital-gets-paid-1738874
+
+# documentation on how DRG rates are calculated (PPS)
+# https://oig.hhs.gov/oei/reports/oei-09-00-00200.pdf
+
 # find additional geographic data on each HRR to see differences by various demographic groups
 
 ######### END OTHER NOTES ######### 
+
+
+# TODO : Sun afternoon
+# finish up visuals in gg_plot (for tests of difference)
+# finish write up
+# clean up code to make simplified answer
+# include alternative detailed answer in google drive file as well (to show other abilities)
+# break up code into components
+
+# TODO : Sun night to Fri night
+# add geospatial branch to github
+# build shiny app on top of geospatial data
+# deploy app to AWS
+# send link to ASA team
